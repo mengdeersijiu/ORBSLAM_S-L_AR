@@ -1,0 +1,145 @@
+%YAML:1.0
+
+#--------------------------------------------------------------------------------------------
+# Camera Parameters. Adjust them!
+#--------------------------------------------------------------------------------------------
+
+# Camera calibration and distortion parameters (OpenCV) 
+Camera.fx: 1.9092607430807607e+02
+Camera.fy: 1.9092607430807607e+02
+Camera.cx: 3.9265130043029785e+02
+Camera.cy: 2.2878742885589600e+02
+
+Camera.k1: 0.0
+Camera.k2: 0.0
+Camera.p1: 0.0
+Camera.p2: 0.0
+
+Camera.width: 752
+Camera.height: 480
+
+# Camera frames per second 
+Camera.fps: 30.0
+
+# stereo baseline times fx
+Camera.bf: 2.2896788493822361e+01
+
+# Color order of the images (0: BGR, 1: RGB. It is ignored if images are grayscale)
+Camera.RGB: 1
+
+# Close/Far threshold. Baseline times.
+ThDepth: 35
+
+#--------------------------------------------------------------------------------------------
+# Stereo Rectification. Only if you need to pre-rectify the images.
+# Camera.fx, .fy, etc must be the same as in LEFT.P
+#--------------------------------------------------------------------------------------------
+LEFT.height: 480
+LEFT.width: 752
+LEFT.D: !!opencv-matrix
+   rows: 1
+   cols: 5
+   dt: d
+   data: [-3.2060087401639570e-01, 1.1874665389564394e-01, -1.1542440135792132e-04, -1.7367708064933219e-04, -2.1334230891393566e-02]
+LEFT.K: !!opencv-matrix
+   rows: 3
+   cols: 3
+   dt: d
+   data: [3.6471670723193591e+02, 0., 3.8196567924380611e+02, 0.,
+       3.6547242767770035e+02, 2.3069564450927393e+02, 0., 0., 1.]
+LEFT.R:  !!opencv-matrix
+   rows: 3
+   cols: 3
+   dt: d
+   data: [9.9998406585578381e-01, 2.2122027608037285e-03,
+       5.1936685955646733e-03, -2.2038436948127356e-03,
+       9.9999626799172325e-01, -1.6146441077161929e-03,
+       -5.1972211329032875e-03, 1.6031723459568440e-03,
+       9.9998520925607937e-01]
+LEFT.P:  !!opencv-matrix
+   rows: 3
+   cols: 4
+   dt: d
+   data: [1.9092607430807607e+02, 0., 3.9265130043029785e+02, 0., 0.,
+       1.9092607430807607e+02, 2.2878742885589600e+02, 0., 0., 0., 1.,
+       0.]
+
+RIGHT.height: 480
+RIGHT.width: 752
+RIGHT.D: !!opencv-matrix
+   rows: 1
+   cols: 5
+   dt: d
+   data:[-3.1482653059825788e-01, 1.1047658854111735e-01,
+       -5.3138466498180311e-04, 1.8902174117183489e-04,
+       -1.8435677719516902e-02]
+RIGHT.K: !!opencv-matrix
+   rows: 3
+   cols: 3
+   dt: d
+   data: [3.6402449212059230e+02, 0., 3.7932823883676002e+02, 0.,
+       3.6438715399074761e+02, 2.4617371237678350e+02, 0., 0., 1.]
+RIGHT.R:  !!opencv-matrix
+   rows: 3
+   cols: 3
+   dt: d
+   data: [9.9999478937447772e-01, 1.4745835104952845e-03,
+       2.8717289851978990e-03, -1.4792019747447405e-03,
+       9.9999761508637564e-01, 1.6067927927621054e-03,
+       -2.8693527862153224e-03, -1.6110322875524034e-03,
+       9.9999458568012090e-01]
+RIGHT.P:  !!opencv-matrix
+   rows: 3
+   cols: 4
+   dt: d
+   data: [1.9092607430807607e+02, 0., 3.9265130043029785e+02,
+       -2.2896788493822361e+01, 0., 1.9092607430807607e+02,
+       2.2878742885589600e+02, 0., 0., 0., 1., 0. ]
+
+#--------------------------------------------------------------------------------------------
+# ORB Parameters
+#--------------------------------------------------------------------------------------------
+
+# ORB Extractor: Number of features per image
+ORBextractor.nFeatures: 1200
+
+# ORB Extractor: Scale factor between levels in the scale pyramid 	
+ORBextractor.scaleFactor: 1.2
+
+# ORB Extractor: Number of levels in the scale pyramid	
+ORBextractor.nLevels: 8
+
+# ORB Extractor: Fast threshold
+# Image is divided in a grid. At each cell FAST are extracted imposing a minimum response.
+# Firstly we impose iniThFAST. If no corners are detected we impose a lower value minThFAST
+# You can lower these values if your images have low contrast			
+ORBextractor.iniThFAST: 20
+ORBextractor.minThFAST: 7
+
+#--------------------------------------------------------------------------------------------
+# Viewer Parameters
+#--------------------------------------------------------------------------------------------
+Viewer.KeyFrameSize: 0.05
+Viewer.KeyFrameLineWidth: 1
+Viewer.GraphLineWidth: 0.9
+Viewer.PointSize: 2
+Viewer.CameraSize: 0.08
+Viewer.CameraLineWidth: 3
+Viewer.ViewpointX: 0
+Viewer.ViewpointY: -0.7
+Viewer.ViewpointZ: -1.8
+Viewer.ViewpointF: 500
+
+
+#--------------------------------------------------------------------------------------------
+# Map Parapeters
+#--------------------------------------------------------------------------------------------
+Map.mapfile: map.bin
+
+#--------------------------------------------------------------------------------------------
+# T File path
+#--------------------------------------------------------------------------------------------
+Tfixed.state: 1
+
+Tcw1.path: /home/mxy/Downloads/ORB_SLAM2-map_save_load_and_bin_voc/config/TcwPath.yaml
+Tfixed.path: /home/mxy/Downloads/ORB_SLAM2-map_save_load_and_bin_voc/config/TwmPath.yaml

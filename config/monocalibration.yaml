@@ -1,0 +1,71 @@
+%YAML:1.0
+
+#--------------------------------------------------------------------------------------------
+# Camera Parameters. Adjust them!
+#--------------------------------------------------------------------------------------------
+
+# Camera calibration and distortion parameters (OpenCV) 
+Camera.fx: 890.9822938083159
+Camera.fy: 890.0575682705359
+Camera.cx: 617.8161904213475
+Camera.cy: 311.2151545327511
+
+Camera.k1: -0.3964002399930276
+Camera.k2: 0.1997586393830379
+Camera.p1: 4.673682924209476e-06
+Camera.p2: -0.0006044008189770374
+Camera.k3: -0.06073332871978201
+
+# Camera frames per second 
+Camera.fps: 30.0
+
+# Color order of the images (0: BGR, 1: RGB. It is ignored if images are grayscale)
+Camera.RGB: 1
+
+#--------------------------------------------------------------------------------------------
+# ORB Parameters
+#--------------------------------------------------------------------------------------------
+
+# ORB Extractor: Number of features per image
+ORBextractor.nFeatures: 1000
+
+# ORB Extractor: Scale factor between levels in the scale pyramid 	
+ORBextractor.scaleFactor: 1.2
+
+# ORB Extractor: Number of levels in the scale pyramid	
+ORBextractor.nLevels: 8
+
+# ORB Extractor: Fast threshold
+# Image is divided in a grid. At each cell FAST are extracted imposing a minimum response.
+# Firstly we impose iniThFAST. If no corners are detected we impose a lower value minThFAST
+# You can lower these values if your images have low contrast			
+ORBextractor.iniThFAST: 20
+ORBextractor.minThFAST: 7
+
+#--------------------------------------------------------------------------------------------
+# Viewer Parameters
+#--------------------------------------------------------------------------------------------
+Viewer.KeyFrameSize: 0.05
+Viewer.KeyFrameLineWidth: 1
+Viewer.GraphLineWidth: 0.9
+Viewer.PointSize: 2
+Viewer.CameraSize: 0.08
+Viewer.CameraLineWidth: 3
+Viewer.ViewpointX: 0
+Viewer.ViewpointY: -0.7
+Viewer.ViewpointZ: -1.8
+Viewer.ViewpointF: 500
+
+#--------------------------------------------------------------------------------------------
+# Map Parapeters
+#--------------------------------------------------------------------------------------------
+Map.mapfile: map.bin
+
+#--------------------------------------------------------------------------------------------
+# Tfixed File path
+#--------------------------------------------------------------------------------------------
+Tfixed.state: 1
+#Tfixed.path: /home/mxy/Downloads/ORB_SLAM2-map_save_load_and_bin_voc/config/Tfixed.yaml
+#Tcw1.path: /home/mxy/Downloads/ORB_SLAM2-map_save_load_and_bin_voc/config/Tcw1.yaml
+Tcw1.path: /home/mxy/Downloads/ORB_SLAM2-map_save_load_and_bin_voc/config/TcwPath.yaml
+Tfixed.path: /home/mxy/Downloads/ORB_SLAM2-map_save_load_and_bin_voc/config/TwmPath.yaml
