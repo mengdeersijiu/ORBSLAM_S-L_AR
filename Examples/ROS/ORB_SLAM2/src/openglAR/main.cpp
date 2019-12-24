@@ -53,6 +53,8 @@ using namespace std;
 #include "mynteye/util/times.h"
 #include "mynteye/api/api.h"
 
+//#include "lib/SlamData.h"
+
 MYNTEYE_USE_NAMESPACE
 
 //#include<ros/ros.h>
@@ -61,10 +63,21 @@ MYNTEYE_USE_NAMESPACE
 //#include <message_filters/time_synchronizer.h>
 //#include <message_filters/sync_policies/approximate_time.h>
 
+std::chrono::steady_clock::time_point tp1, tp2, tp3;
+enum TimePointIndex {
+    TIME_BEGIN,
+    TIME_FINISH_CV_PROCESS,
+    TIME_FINISH_SLAM_PROCESS
+};
+
 cv::Mat image_split(cv::Mat img,CvRect rect);
 cv::Mat image_processL(cv::Mat img);
 cv::Mat image_processR(cv::Mat img);
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);// 当窗口大小改变时回调函数
+void SaveTimePoint(TimePointIndex index);
+void CalculateAndPrintOutProcessingFrequency(void);
+std::vector<cv::Mat> CalculateDeltaT(cv::Mat T);
+int num = 2;
 
 int main( void )
 {
@@ -390,9 +403,16 @@ int main( void )
     glm::mat4 ModelMatrix;
     cv::Mat LeftUndistort;
 
+    std::vector<cv::Mat> VVelocity;
+    cv::Mat Velocity;
+    int nflag = 0;
+    bool flag = 0;
     do
     {
+        SaveTimePoint(TimePointIndex::TIME_BEGIN);
+
         ni++;
+
 /*        cap1 >> imageALL;
         if(imageALL.empty())
         {
@@ -487,11 +507,35 @@ int main( void )
         ProjectionMatrix = getProjectionMatrix();
         ModelMatrix = getModelMatrix();
 
+        SaveTimePoint(TimePointIndex::TIME_FINISH_CV_PROCESS);
         if(slamMode)
         {
-            //cv::Mat CameraPose = SLAM.TrackStereoOriginalIm(imLeft, imRight, tframe);
-            CameraPose = SLAM.TrackStereoOriginalIm(left_data.frame, right_data.frame, left_data.img->timestamp*0.00001f);
-            //cv::Mat viewMatrix = cv::Mat::zeros(4, 4, CV_64FC1);
+            Velocity = SLAM.GetVelocity();
+            if(!Velocity.empty())
+            {
+                nflag++;
+                VVelocity = CalculateDeltaT(Velocity);
+                //int i = num%nflag;
+                //下面交替执行，靠在循环中减少调用 SLAM.TrackStereoOriginalIm的次数来达到加速
+                if(flag == 0)
+                {
+                    //cv::Mat CameraPose = SLAM.TrackStereoOriginalIm(imLeft, imRight, tframe);
+                    CameraPose = SLAM.TrackStereoOriginalIm(left_data.frame, right_data.frame, left_data.img->timestamp*0.00001f);
+                    flag=1;
+                }
+                else
+                {
+                    cv::Mat tempVelocity = VVelocity[0].clone();
+                    CameraPose = tempVelocity*CameraPose;
+                    cout<<"use Velocity!!!!"<<endl;
+                    flag = 0;
+                }
+            }
+            else
+            {
+                CameraPose = SLAM.TrackStereoOriginalIm(left_data.frame, right_data.frame, left_data.img->timestamp*0.00001f);
+            }
+
 
             //用Tcw构造ViewMatrix
             if(!CameraPose.empty())
@@ -519,19 +563,19 @@ int main( void )
             }
 
             //发生回环地图更新时重新计算Tpw
-            if(!Tpw.empty())
-            {
-                bLocalizationMode = SLAM.GetActivateLocalizationMode();
-                if(!bLocalizationMode)
-                {
-                    if(SLAM.MapChanged())
-                    {
-                        cout << "Map changed. All virtual elements are recomputed!" << endl;
-                        Tpw = SLAM.Recompute1();
-                        initModelMatrix1 = orb_tracker.getInitModelMatrix1(Tpw);
-                    }
-                }
-            }
+//            if(!Tpw.empty())
+//            {
+//                bLocalizationMode = SLAM.GetActivateLocalizationMode();
+//                if(!bLocalizationMode)
+//                {
+//                    if(SLAM.MapChanged())
+//                    {
+//                        cout << "Map changed. All virtual elements are recomputed!" << endl;
+//                        Tpw = SLAM.Recompute1();
+//                        initModelMatrix1 = orb_tracker.getInitModelMatrix1(Tpw);
+//                    }
+//                }
+//            }
             MVP = ProjectionMatrix * ViewMatrix * initModelMatrix1 * ModelMatrix;
         }
         else
@@ -684,7 +728,12 @@ int main( void )
         glDrawArrays(GL_TRIANGLES, 0, (GLsizei)vertices.size() );
 
         glfwSwapBuffers(window2);
+
+        SaveTimePoint(TimePointIndex::TIME_FINISH_SLAM_PROCESS);
+        CalculateAndPrintOutProcessingFrequency();
+
         glfwPollEvents();
+
 
     } // Check if the ESC key was pressed or the window was closed
     while( glfwGetKey(window, GLFW_KEY_ESCAPE ) != GLFW_PRESS &&
@@ -752,4 +801,105 @@ cv::Mat image_processR(cv::Mat img)
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
     glViewport(0, 0, width, height);//确保视口大小与新窗口尺寸相匹配，注意视网膜屏幕的尺寸分辨率参数会更高
+}
+
+
+
+void SaveTimePoint(TimePointIndex index)
+{
+    switch (index)
+    {
+        case TIME_BEGIN:
+            tp1 = std::chrono::steady_clock::now();
+            break;
+        case TIME_FINISH_CV_PROCESS:
+            tp2 = std::chrono::steady_clock::now();
+            break;
+        case TIME_FINISH_SLAM_PROCESS:
+            tp3 = std::chrono::steady_clock::now();
+            break;
+        default:
+            break;
+    }
+}
+
+void CalculateAndPrintOutProcessingFrequency(void)
+{
+    static long spinCnt = 0;
+    static double t_temp = 0;
+
+    double time_read= std::chrono::duration_cast<std::chrono::duration<double> >(tp2 - tp1).count();
+    double time_track= std::chrono::duration_cast<std::chrono::duration<double> >(tp3 - tp2).count();
+    double time_total= std::chrono::duration_cast<std::chrono::duration<double> >(tp3 - tp1).count();
+
+    cout << "Image reading time = " << setw(10) << time_read  << "s" << endl;
+    cout << "Tracking time =      " << setw(10) << time_track << "s, frequency = " << 1/time_track << "Hz" << endl;
+    cout << "All cost time =      " << setw(10) << time_total << "s, frequency = " << 1/time_total << "Hz" << endl;
+    t_temp = (time_total + t_temp*spinCnt)/(1+spinCnt);
+    cout << "Avg. time =          " << setw(10) << t_temp     << "s, frequency = " << 1/t_temp     << "Hz" << endl;
+    cout << "\n\n" << endl;
+
+    spinCnt++;
+}
+
+std::vector<cv::Mat> CalculateDeltaT(cv::Mat T)
+{
+    std::vector<cv::Mat> VVelocity_1;
+    cv::Mat Velocity = T.clone();
+    cv::Mat Velocity_1 = cv::Mat::eye(4, 4, CV_32F);
+
+    cv::Mat R = cv::Mat::eye(3, 3, CV_32F);
+    cv::Mat R_1 = cv::Mat::eye(3, 3, CV_32F);
+    cv::Mat R_1_1;
+    cv::Mat t_1_1;
+
+    cv::Mat t, t_1;
+    cv::Mat Rvec, Rvec_1;
+
+    float x,y,z;
+    float t1,t2,t3;
+
+    cv::Mat T_trans = cv::Mat::eye(4, 4, CV_32F);
+    cv::Mat result = cv::Mat::eye(4, 4, CV_32F);
+
+    if(!T.empty())
+    {
+        R = Velocity.rowRange(0,3).colRange(0,3);
+        t = Velocity.rowRange(0,3).col(3);
+
+        cv::Rodrigues(R,Rvec);
+
+
+        x = Rvec.at<float>(0,0);
+        y = Rvec.at<float>(1,0);
+        z = Rvec.at<float>(2,0);
+
+        Rvec_1 = (cv::Mat_<float>(3,1) << x/num, y/num, z/num);
+
+        t1 = t.at<float>(0,0);
+        t2 = t.at<float>(1,0);
+        t3 = t.at<float>(2,0);
+
+        t_1 = (cv::Mat_<float>(3,1) << t1/num, t2/num, t3/num);
+
+        cv::Rodrigues(Rvec_1, R_1);
+        R_1.copyTo(Velocity_1.rowRange(0,3).colRange(0,3));
+        t_1.copyTo(Velocity_1.rowRange(0,3).col(3));
+
+        //验证
+//        R_1_1 = R_1.t();
+//        t_1_1 = -R_1.t()*t_1;
+//        R_1_1.copyTo(T_trans.rowRange(0,3).colRange(0,3));
+//        t_1_1.copyTo(T_trans.rowRange(0,3).col(3));
+//        result = T_trans*T_trans*Velocity;
+//        cout<<"result:"<<endl<<result<<endl;
+
+        for(int n=1; n<num; n++)
+        {
+            VVelocity_1.push_back(Velocity_1);
+            Velocity_1 = Velocity_1*Velocity_1;
+        }
+    }
+
+    return VVelocity_1;
 }
