@@ -1,4 +1,7 @@
 #define GLM_FORCE_RADIANS
+
+#define MarkerID 699
+
 #include <glm/glm.hpp>
 #include <glm/gtx/transform.hpp>
 
@@ -7,17 +10,61 @@
 #include "utils.h"
 
 //ARUCO
-#include <aruco/aruco.h>
-#include <aruco/cvdrawingutils.h>
+//#include <aruco/aruco.h>
+//#include <aruco/cvdrawingutils.h>
 
 using namespace cv;
 using namespace std;
 
-glm::mat4 Tracker::getInitModelMatrix()
+glm::mat4 Tracker::getInitModelMatrix(bool slamMode)
 {
-    glm::mat4 initModelMatrix;
-    Mat initR = cv::Mat::ones(3,3,CV_64FC1);
-    Mat viewMatrix = cv::Mat::zeros(4, 4, CV_64FC1);
+    if(!slamMode)
+    {
+        //glm::mat4 rotation = glm::rotate(glm::mat4(1.0), glm::radians(180.0f), glm::vec3( -1, 0, 0));
+        glm::mat4 initModelMatrix;
+        cv::Mat initR = cv::Mat::ones(3,3,CV_64FC1);
+        cv::Mat viewMatrix = cv::Mat::zeros(4, 4, CV_64FC1);
+
+        if(!rvec.empty())
+        {
+            Rodrigues(rvec, initR);
+        }
+
+        for(unsigned int row=0; row<3; ++row)
+        {
+            for(unsigned int col=0; col<3; ++col)
+            {
+                viewMatrix.at<double>(row, col) = initR.at<double>(row, col);
+            }
+            if(!tvec.empty())
+            {
+                viewMatrix.at<double>(row, 3) = tvec.at<double>(row, 0);
+            }
+        }
+        viewMatrix.at<double>(3, 3) = 1.0f;
+
+        viewMatrix.convertTo(viewMatrix, CV_32F);
+
+        for (int i = 0; i < 4; i++) {
+            for (int j = 0; j < 4; j++) {
+                initModelMatrix[i][j] = viewMatrix.at<float>(j,i);
+            }
+        }
+
+        //initModelMatrix = rotation * initModelMatrix;
+        return initModelMatrix;
+    }
+}
+
+glm::mat4 Tracker::getInitModelMatrix1(cv::Mat Tpw)
+{
+    glm::mat4 initModelMatrix1;
+    Tpw.convertTo(Tpw,CV_32F);
+
+#if 0
+    cv::Mat initR = cv::Mat::ones(3,3,CV_64FC1);
+    cv::Mat viewMatrix = cv::Mat::zeros(4, 4, CV_64FC1);
+
     if(!rvec.empty())
     {
         Rodrigues(rvec, initR);
@@ -35,34 +82,8 @@ glm::mat4 Tracker::getInitModelMatrix()
         }
     }
     viewMatrix.at<double>(3, 3) = 1.0f;
-
-    //viewMatrix = cvToGl * viewMatrix;
-
     viewMatrix.convertTo(viewMatrix, CV_32F);
-
-    for (int i = 0; i < 4; i++)
-    {
-        for (int j = 0; j < 4; j++)
-        {
-            initModelMatrix[i][j] = viewMatrix.at<float>(j,i);
-        }
-    }
-    return initModelMatrix;
-}
-
-glm::mat4 Tracker::getInitModelMatrix1(cv::Mat Tpw)
-{
-    glm::mat4 initModelMatrix1;
-
-/*    Tpw.convertTo(Tpw,CV_64F);
-    cv::Mat cvToGl = cv::Mat::zeros(4, 4, CV_64F);
-    cvToGl.at<double>(0, 0) = 1.0f;
-    cvToGl.at<double>(1, 1) = -1.0f;
-    cvToGl.at<double>(2, 2) = -1.0f;
-    cvToGl.at<double>(3, 3) = 1.0f;
-    Tpw = cvToGl * Tpw;*/
-
-    Tpw.convertTo(Tpw,CV_32F);
+#endif
 
     for (int i = 0; i < 4; i++)
     {
@@ -172,11 +193,13 @@ bool Tracker::process(const Mat frame_left, bool slamMode)
     return 1;
 }
 
+
 bool Tracker::process1(cv::Mat &frame_left, bool slamMode)
 {
     if (slamMode)
         return 1;
 
+#if 0
     aruco::CameraParameters camparam;
     camparam.CameraMatrix = K.clone();
     camparam.Distorsion = DistCoef.clone();
@@ -187,19 +210,20 @@ bool Tracker::process1(cv::Mat &frame_left, bool slamMode)
     int Marker_ID;
     aruco::MarkerDetector MDetector;
     aruco::CvDrawingUtils MDraw;
-    //旋转向量
-    cv::Mat Rvec;
-    //平移向量
-    cv::Mat Tvec;
+//    //旋转向量
+//    cv::Mat Rvec;
+//    //平移向量
+//    cv::Mat Tvec;
+
+
     //识别marker
     vector<aruco::Marker> Markers = MDetector.detect(frame_left, camparam, MarkerSize);
 
-    //识别出marker，并在100这个marker上绘制边
+    //识别出marker，并在699这个marker上绘制边
     for (unsigned int j=0;j<Markers.size();j++)
     {
         //marker ID test
         Marker_ID = Markers[j].id;
-        //printf("Marker ID = %d \n",Marker_ID);
 
         if(Marker_ID == 699)
         {
@@ -209,9 +233,6 @@ bool Tracker::process1(cv::Mat &frame_left, bool slamMode)
             rvec = Markers[j].Rvec;
             //平移向量
             tvec = Markers[j].Tvec;
-            double T = cv::norm(Tvec);
-            //cout<<"Tvec: "<<T<<endl;
-            cout<<"Tvec: "<<Tvec<<endl;
 
             // 在图像上marker的位置绘制坐标
             if (camparam.isValid() && MarkerSize != -1)
@@ -220,9 +241,11 @@ bool Tracker::process1(cv::Mat &frame_left, bool slamMode)
             }
         }
     }
-    cv::waitKey(16.667);//wait for key to be pressed
+    //注意：orbslam的currentFrame窗口好像与下面这个窗口不能同时运行
+    cv::waitKey(16);//wait for key to be pressed
     cv::imshow("Frame",frame_left);
 
+#endif
 
     if(rvec.empty()||tvec.empty())
     {
@@ -230,4 +253,97 @@ bool Tracker::process1(cv::Mat &frame_left, bool slamMode)
     }else{
         return 1;
     }
+}
+
+
+bool Tracker::processARUCO(cv::Mat &frame_left, bool slamMode)
+{
+    if (slamMode)
+        return 1;
+
+//    Ptr<aruco::Dictionary> dictionary;
+//    vector<int> markerIds;
+//    vector<vector<cv::Point2f>> markerCorners, rejectedCandidates;
+//    Ptr<aruco::DetectorParameters> detectorParams = aruco::DetectorParameters::create();
+//    float markerLength = 0.086;
+
+//    dictionary = aruco::getPredefinedDictionary(aruco::PREDEFINED_DICTIONARY_NAME::DICT_ARUCO_ORIGINAL);
+
+    if(dictionary == NULL || detectorParams == NULL){
+        cout<<"dictionary or detectorParams is null"<<endl;
+        exit(11);
+    }
+
+    aruco::detectMarkers(
+            frame_left,
+            dictionary,
+            markerCorners,
+            markerIds,
+            detectorParams,
+            rejectedCandidates
+            );
+
+    if(markerIds.size() > 0) {
+        int markerid = 0;
+        for(unsigned int i=0;i<markerIds.size();i++){
+            if(MarkerID == markerIds[i]){
+                markerid = i;
+                cout << "Marker found ID:"<< markerIds[markerid] <<"\n"<< endl;
+            }
+        }
+
+        vector<cv::Vec3d> rvecs, tvecs;
+        aruco::estimatePoseSingleMarkers(
+                markerCorners,
+                markerLength,
+                K,
+                DistCoef,//内参和畸变好像要用CV_32F的Mat（也就是float）
+                rvecs,   //rvecs和tvecs好像要用Vec3d格式的vector
+                tvecs
+                );
+
+        cv::Vec3d r = rvecs[markerid];
+        cv::Vec3d t = tvecs[markerid];
+
+        cv::Mat rtemp = cv::Mat::zeros(3,1,CV_32FC1);
+        cv::Mat ttemp = cv::Mat::zeros(3,1,CV_32FC1);
+
+        rtemp.at<float>(0,0) = r[0];
+        rtemp.at<float>(0,1) = r[1];
+        rtemp.at<float>(0,2) = r[2];
+        ttemp.at<float>(0,0) = t[0];
+        ttemp.at<float>(0,1) = t[1];
+        ttemp.at<float>(0,2) = t[2];
+
+        rtemp.convertTo(rtemp, CV_64FC1);
+        ttemp.convertTo(ttemp, CV_64FC1);
+        rvec = rtemp.clone();
+        tvec = ttemp.clone();
+//        cout<<"rvec:"<<rvec<<endl;
+//        cout<<"tvec:"<<tvec<<endl;
+//
+//        if(rvec.empty()||tvec.empty()){
+//            return 0;
+//        }else{
+//            //在标识上绘制(OpenCV的功能)
+//            aruco::drawDetectedMarkers(frame_left, markerCorners, markerIds);
+//            aruco::drawAxis(frame_left,       //图像
+//                            K,                //相机内参
+//                            DistCoef,        //畸变参数
+//                            r,
+//                            t,             //标识的位姿
+//                            0.5*markerLength  //轴长
+//                            );
+//            return 1;
+//        }
+
+    }
+
+    if(rvec.empty()||tvec.empty())
+    {
+        return 0;
+    }else{
+        return 1;
+    }
+
 }

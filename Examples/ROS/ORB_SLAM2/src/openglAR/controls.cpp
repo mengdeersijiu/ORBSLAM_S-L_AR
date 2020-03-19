@@ -17,6 +17,7 @@ glm::mat4 ModelMatrix;
 glm::mat4 TranslateMatrix;
 glm::mat4 ScalingMatrix;
 glm::mat4 ProjectionMatrix;
+glm::mat4 ProjectionMatrix1;
 
 glm::mat4 getModelMatrix()
 {
@@ -25,6 +26,11 @@ glm::mat4 getModelMatrix()
 glm::mat4 getProjectionMatrix()
 {
 	return ProjectionMatrix;
+}
+
+glm::mat4 getProjectionMatrix1()
+{
+    return ProjectionMatrix1;
 }
 
 //float scale_factor = 1;
@@ -36,11 +42,11 @@ float translate_y = 0;
 float translate_z = 0;
 
 
-float speed = 0.001f; // 3 units / second
-float rotate_speed = 90.0f;
-float translate_speed = 1.0f;
+float speed = 0.0005f; // 3 units / second
+float rotate_speed = 30.0f;
+float translate_speed = 0.2f;
 
-void computeMatricesFromInputs()
+void computeMatricesFromInputs(bool slamMode)
 {
     //因为模型是面朝下倒着的，要做一个旋转让它站起来
     ModelMatrix = glm::rotate(glm::mat4(1.0), glm::radians(180.0f), glm::vec3( -1, 0, 0));
@@ -83,19 +89,19 @@ void computeMatricesFromInputs()
         rotation_y -= deltaTime * rotate_speed;
     }
     //平移
-    if (glfwGetKey( window, GLFW_KEY_KP_4 ) == GLFW_PRESS)
+    if (glfwGetKey( window, GLFW_KEY_KP_8 ) == GLFW_PRESS)
     {
         translate_x -= deltaTime * translate_speed;
     }
-    if (glfwGetKey( window, GLFW_KEY_KP_6 ) == GLFW_PRESS)
+    if (glfwGetKey( window, GLFW_KEY_KP_2 ) == GLFW_PRESS)
     {
         translate_x += deltaTime * translate_speed;
     }
-    if (glfwGetKey( window, GLFW_KEY_KP_2 ) == GLFW_PRESS)
+    if (glfwGetKey( window, GLFW_KEY_KP_6 ) == GLFW_PRESS)
     {
         translate_z -= deltaTime * translate_speed;
     }
-    if (glfwGetKey( window, GLFW_KEY_KP_8 ) == GLFW_PRESS)
+    if (glfwGetKey( window, GLFW_KEY_KP_4 ) == GLFW_PRESS)
     {
         translate_z += deltaTime * translate_speed;
     }
@@ -125,12 +131,11 @@ void computeMatricesFromInputs()
 
     float width = 640;
     float height = 400;
-    
+
     float near_plane = 0.01;
     float far_plane = 100;
     
     float projection_matrix[16];
-    
     projection_matrix[0] = 2*f_x/width;
     projection_matrix[1] = 0.0f;
     projection_matrix[2] = 0.0f;
@@ -150,8 +155,40 @@ void computeMatricesFromInputs()
     projection_matrix[13] = 0.0f;
     projection_matrix[14] = -2.0f*far_plane*near_plane/(far_plane - near_plane);
     projection_matrix[15] = 0.0f;
+
+    //////////////////////////////////////////
+    float f_x1 = 403.575016;
+    float f_y1 = 403.575016;
+    float c_x1 = 310.014473;
+    float c_y1 = 203.087488;
+    float width1 = 426;
+    float height1 = 266;
+    float near_plane1 = 0.01;
+    float far_plane1 = 100;
+
+    float projection_matrix1[16];
+    projection_matrix1[0] = 2*f_x1/width1;
+    projection_matrix1[1] = 0.0f;
+    projection_matrix1[2] = 0.0f;
+    projection_matrix1[3] = 0.0f;
+
+    projection_matrix1[4] = 0.0f;
+    projection_matrix1[5] = 2*f_y1/height1;
+    projection_matrix1[6] = 0.0f;
+    projection_matrix1[7] = 0.0f;
+
+    projection_matrix1[8] = 1.0f - 2*c_x1/width1;
+    projection_matrix1[9] = 2*c_y1/height1 - 1.0f;
+    projection_matrix1[10] = -(far_plane1 + near_plane1)/(far_plane1 - near_plane1);
+    projection_matrix1[11] = -1.0f;
+
+    projection_matrix1[12] = 0.0f;
+    projection_matrix1[13] = 0.0f;
+    projection_matrix1[14] = -2.0f*far_plane1*near_plane1/(far_plane1 - near_plane1);
+    projection_matrix1[15] = 0.0f;
     
     ProjectionMatrix = glm::make_mat4(projection_matrix);
+    ProjectionMatrix1 = glm::make_mat4(projection_matrix1);
     
     // Model matrix
     ModelMatrix = glm::rotate(ModelMatrix, glm::radians(rotation_x), glm::vec3( 1, 0, 0));
